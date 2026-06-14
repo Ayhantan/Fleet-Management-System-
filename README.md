@@ -1,6 +1,12 @@
 # Distributed Maintenance & Fleet Management System
 
-Spring Boot tabanli, portfolio-grade bir backend proje calismasi. Proje su an Sprint 1 kapsaminda ilerliyor ve ilk odak alani Vehicle module.
+A portfolio-grade backend project built with Spring Boot for managing fleet assets, maintenance planning, authentication, and operational tracking.
+
+The project currently includes:
+- JWT-based authentication
+- vehicle and vehicle group management
+- maintenance definition, schedule, and task modules
+- usage-based and time-based maintenance calculation support
 
 ## Tech Stack
 
@@ -13,21 +19,26 @@ Spring Boot tabanli, portfolio-grade bir backend proje calismasi. Proje su an Sp
 - Jakarta Validation
 - Lombok
 
-## Current Status
+## Current Scope
 
-Su ana kadar tamamlanan temel parcalar:
+The system is being developed incrementally in sprints.
 
-- Spring Boot application ayakta
-- PostgreSQL baglantisi aktif
-- Docker uzerinde veritabani kullaniliyor
-- `/health` endpoint'i calisiyor
-- Gecici `SecurityConfig` ile tum requestler su an `permitAll`
-- Sprint 1 icin Vehicle CRUD module olusturuldu
-- Vehicle domain modeli bakim stratejilerini destekleyecek sekilde guclendirildi
+Implemented so far:
+- application bootstrap and database integration
+- health check endpoint
+- JWT authentication and authorization
+- vehicle CRUD
+- vehicle group CRUD
+- vehicle-to-group assignment
+- maintenance definitions as database-driven master data
+- maintenance schedules linked to vehicles and maintenance definitions
+- maintenance tasks for planned and completed maintenance work
+- vehicle usage update endpoint with schedule recalculation
+- maintenance completion flow with backward compatibility for existing vehicle maintenance fields
 
-## Project Structure
+## Architecture
 
-Kod katmanli mimari ile organize edildi:
+The project uses a layered monolith structure:
 
 - `controller`
 - `service`
@@ -35,6 +46,8 @@ Kod katmanli mimari ile organize edildi:
 - `dto`
 - `entity`
 - `exception`
+- `security`
+- `config`
 
 Base package:
 
@@ -42,22 +55,52 @@ Base package:
 com.ayhan.fleet_management
 ```
 
+## Authentication Module
+
+JWT-based authentication is implemented with stateless session management.
+
+Public endpoints:
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /health`
+
+Protected endpoints:
+- `/api/vehicles/**`
+- `/api/vehicle-groups/**`
+- `/api/maintenance-definitions/**`
+- `/api/maintenance-schedules/**`
+- `/api/maintenance-tasks/**`
+
+### Auth Flow
+
+- users register with username, email, and password
+- passwords are encoded with `BCryptPasswordEncoder`
+- login returns a JWT token
+- protected endpoints require `Authorization: Bearer <token>`
+
 ## Vehicle Module
 
-Vehicle modeli artik sadece temel arac bilgilerini degil, ayni zamanda bakim davranisini da tanimliyor.
+`Vehicle` is currently the maintainable asset root. The name stays as `Vehicle` for now to avoid a large refactor, but the maintenance model is being designed to support a broader asset domain.
 
-Amac:
-
-- arac/ekipman kimligini tutmak
-- guncel kullanim olcumlerini saklamak
-- son bakim referanslarini saklamak
-- bakimin zaman bazli, saat bazli veya mesafe bazli tetiklenmesini desteklemek
-
-### Vehicle Domain Fields
+### Vehicle Operational Fields
 
 - `id`
 - `name`
+- `plateNumber`
+- `brand`
+- `model`
+- `modelYear`
 - `type`
+- `status`
+- `imageUrl`
+- `vehicleGroup`
+- `createdAt`
+- `updatedAt`
+
+### Vehicle Maintenance Fields
+
+The existing maintenance fields are still preserved for backward compatibility:
+
 - `category`
 - `currentHourMeter`
 - `currentDistanceReading`
@@ -71,7 +114,13 @@ Amac:
 - `timeIntervalUnit`
 - `distanceUnit`
 
-### MaintenanceTriggerType
+### Vehicle Status
+
+- `ACTIVE`
+- `IN_MAINTENANCE`
+- `OUT_OF_SERVICE`
+
+### Maintenance Trigger Types
 
 - `TIME`
 - `HOURS`
@@ -79,143 +128,227 @@ Amac:
 - `TIME_AND_HOURS`
 - `TIME_AND_DISTANCE`
 
-### TimeIntervalUnit
+### Interval Units
 
+Time:
 - `DAY`
 - `WEEK`
 - `MONTH`
 - `YEAR`
 
-### DistanceUnit
-
+Distance:
 - `KILOMETER`
 - `MILE`
 
+## Vehicle Group Module
+
+Vehicles can be grouped for operational organization.
+
+### VehicleGroup Fields
+
+- `id`
+- `name`
+- `description`
+- `createdAt`
+- `updatedAt`
+
+Rules:
+- group name must be unique
+- a vehicle may belong to zero or one group
+
+## Maintenance Module
+
+The maintenance module is designed around three main concepts:
+
+1. `MaintenanceDefinition`
+- reusable, database-driven maintenance master data
+- examples: oil change, brake inspection, track inspection, nozzle replacement, landing gear inspection, custom maintenance item
+
+2. `MaintenanceSchedule`
+- links a `Vehicle` and a `MaintenanceDefinition`
+- stores due rule and calculated next due values
+
+3. `MaintenanceTask`
+- represents an actual planned or completed maintenance job
+
+### MaintenanceDefinition Fields
+
+- `id`
+- `name`
+- `description`
+- `category`
+- `applicableAssetType`
+- `active`
+- `createdAt`
+- `updatedAt`
+
+### MaintenanceSchedule Fields
+
+- `id`
+- `vehicle`
+- `maintenanceDefinition`
+- `triggerType`
+- `intervalHour`
+- `intervalDistance`
+- `intervalTimeValue`
+- `intervalTimeUnit`
+- `nextDueDate`
+- `nextDueHourMeter`
+- `nextDueDistanceReading`
+- `active`
+- `createdAt`
+- `updatedAt`
+
+### MaintenanceTask Fields
+
+- `id`
+- `vehicle`
+- `maintenanceSchedule`
+- `maintenanceDefinition`
+- `title`
+- `description`
+- `status`
+- `priority`
+- `plannedDate`
+- `dueDate`
+- `dueHourMeter`
+- `dueDistanceReading`
+- `completedDate`
+- `completedHourMeter`
+- `completedDistanceReading`
+- `notes`
+- `createdAt`
+- `updatedAt`
+
+### Maintenance Task Status
+
+- `PLANNED`
+- `IN_PROGRESS`
+- `COMPLETED`
+- `CANCELLED`
+
+### Maintenance Priority
+
+- `LOW`
+- `MEDIUM`
+- `HIGH`
+- `CRITICAL`
+
+### Calculated Maintenance Status
+
+Response-only maintenance state:
+
+- `ON_TRACK`
+- `UPCOMING`
+- `OVERDUE`
+
 ## Validation Rules
 
-Vehicle request validation iki seviyede yapiliyor:
+Validation is handled at both DTO and service levels.
 
-1. DTO seviyesi
-- zorunlu alanlar
-- negatif deger engeli
+Examples:
+- `plateNumber` must be unique
+- vehicle group name must be unique
+- `HOURS` trigger requires hour-based inputs
+- `DISTANCE` trigger requires distance-based inputs
+- `TIME` trigger requires time interval fields
+- maintenance schedules validate trigger-specific interval fields
+- usage update requires at least one value
 
-2. Service seviyesi
-- `HOURS` iceren trigger tiplerinde `currentHourMeter` ve `hourIntervalValue` zorunlu
-- `DISTANCE` iceren trigger tiplerinde `currentDistanceReading`, `distanceIntervalValue` ve `distanceUnit` zorunlu
-- `TIME` iceren trigger tiplerinde `timeIntervalValue` ve `timeIntervalUnit` zorunlu
-- `lastMaintenanceHourMeter <= currentHourMeter`
-- `lastMaintenanceDistanceReading <= currentDistanceReading`
-
-## API Endpoints
+## API Overview
 
 ### Health
 
 - `GET /health`
 
-### Vehicle
+### Auth
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+
+### Vehicles
 
 - `POST /api/vehicles`
 - `GET /api/vehicles`
 - `GET /api/vehicles/{id}`
 - `PUT /api/vehicles/{id}`
 - `DELETE /api/vehicles/{id}`
+- `PUT /api/vehicles/{vehicleId}/group/{groupId}`
+- `DELETE /api/vehicles/{vehicleId}/group`
+- `PATCH /api/vehicles/{vehicleId}/usage`
 
-## Example Request Bodies
+### Vehicle Groups
 
-### 1. Heavy equipment with hour-based maintenance
+- `POST /api/vehicle-groups`
+- `GET /api/vehicle-groups`
+- `GET /api/vehicle-groups/{id}`
+- `PUT /api/vehicle-groups/{id}`
+- `DELETE /api/vehicle-groups/{id}`
 
-```json
-{
-  "name": "CAT D6 Dozer",
-  "type": "Dozer",
-  "category": "Heavy Equipment",
-  "currentHourMeter": 1820,
-  "currentDistanceReading": null,
-  "lastMaintenanceDate": "2026-05-20",
-  "lastMaintenanceHourMeter": 1600,
-  "lastMaintenanceDistanceReading": null,
-  "maintenanceTriggerType": "HOURS",
-  "hourIntervalValue": 250,
-  "distanceIntervalValue": null,
-  "timeIntervalValue": null,
-  "timeIntervalUnit": null,
-  "distanceUnit": null
-}
-```
+### Maintenance Definitions
 
-### 2. Car with time and distance-based maintenance
+- `POST /api/maintenance-definitions`
+- `GET /api/maintenance-definitions`
+- `GET /api/maintenance-definitions/{id}`
+- `PUT /api/maintenance-definitions/{id}`
+- `DELETE /api/maintenance-definitions/{id}`
 
-```json
-{
-  "name": "Toyota Corolla Fleet 12",
-  "type": "Car",
-  "category": "Passenger Vehicle",
-  "currentHourMeter": null,
-  "currentDistanceReading": 86500,
-  "lastMaintenanceDate": "2026-01-10",
-  "lastMaintenanceHourMeter": null,
-  "lastMaintenanceDistanceReading": 76500,
-  "maintenanceTriggerType": "TIME_AND_DISTANCE",
-  "hourIntervalValue": null,
-  "distanceIntervalValue": 10000,
-  "timeIntervalValue": 1,
-  "timeIntervalUnit": "YEAR",
-  "distanceUnit": "KILOMETER"
-}
-```
+### Maintenance Schedules
 
-### 3. Equipment with only time-based maintenance
+- `POST /api/maintenance-schedules`
+- `GET /api/maintenance-schedules`
+- `GET /api/maintenance-schedules/{id}`
+- `PUT /api/maintenance-schedules/{id}`
+- `DELETE /api/maintenance-schedules/{id}`
+- `POST /api/maintenance-schedules/{id}/recalculate`
+- `GET /api/maintenance-schedules/upcoming`
+- `GET /api/maintenance-schedules/overdue`
 
-```json
-{
-  "name": "Air Compressor Unit A",
-  "type": "Compressor",
-  "category": "Workshop Equipment",
-  "currentHourMeter": null,
-  "currentDistanceReading": null,
-  "lastMaintenanceDate": "2026-03-01",
-  "lastMaintenanceHourMeter": null,
-  "lastMaintenanceDistanceReading": null,
-  "maintenanceTriggerType": "TIME",
-  "hourIntervalValue": null,
-  "distanceIntervalValue": null,
-  "timeIntervalValue": 6,
-  "timeIntervalUnit": "MONTH",
-  "distanceUnit": null
-}
-```
+### Maintenance Tasks
 
-## Database Configuration
+- `POST /api/maintenance-tasks`
+- `GET /api/maintenance-tasks`
+- `GET /api/maintenance-tasks/{id}`
+- `PUT /api/maintenance-tasks/{id}`
+- `DELETE /api/maintenance-tasks/{id}`
+- `POST /api/maintenance-tasks/{id}/complete`
+- `GET /api/maintenance-tasks/history/vehicle/{vehicleId}`
 
-Current local development database:
+## Local Development Configuration
+
+Current local database setup:
 
 - Host: `localhost`
 - Port: `5432`
 - Database: `fleetdb`
 - Username: `fleetuser`
 
-JPA ayari:
+JPA setting:
 
-- `ddl-auto: update`
+- `spring.jpa.hibernate.ddl-auto=update`
 
 ## Running the Project
 
-1. PostgreSQL container'in ayakta oldugundan emin ol
-2. `fleetdb` veritabaninin hazir oldugunu kontrol et
-3. Spring Boot application'i calistir
-4. `http://localhost:8080/health` endpoint'ini test et
+1. Make sure the PostgreSQL container is running.
+2. Verify that the `fleetdb` database is available.
+3. Start the Spring Boot application.
+4. Test `http://localhost:8080/health`.
+5. Register a user via `/api/auth/register`.
+6. Log in via `/api/auth/login`.
+7. Use the returned JWT token for protected endpoints.
 
 ## Notes
 
-- Authentication ve JWT henuz eklenmedi
-- `SecurityConfig` su an gecici olarak acik yapida
-- MaintenanceRecord ve MaintenancePolicy entity'leri bilerek Sprint 1 disinda tutuldu
-- Domain modeli gereksiz soyutlama olmadan pragmatik tutuldu
+- JWT authentication is enabled and sessions are stateless.
+- `Vehicle` remains the current maintainable asset root for compatibility.
+- maintenance definitions are database records, not enums
+- no file upload, invoice, spare parts, technician, workshop, cron jobs, or event sourcing yet
+- the design stays intentionally simple and interview-ready while remaining extensible
 
-## Next Possible Steps
+## Next Likely Steps
 
-- Maintenance record module
-- Due maintenance calculation logic
-- Dashboard / reporting endpoints
-- JWT-based authentication and authorization
-- Test coverage for service and controller layers
+- maintenance overview and dashboard responses
+- urgency scoring and richer due calculations
+- role-based access restrictions
+- test coverage for service and controller layers
+- future asset abstraction beyond `Vehicle`
