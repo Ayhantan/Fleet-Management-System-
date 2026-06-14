@@ -1,0 +1,27 @@
+package com.ayhan.fleet_management.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class MaintenanceDefinitionRequestDto {
+
+    @NotBlank(message = "Maintenance definition name is required")
+    private String name;
+
+    private String description;
+
+    private String category;
+
+    private String applicableAssetType;
+
+    private Boolean active;
+}

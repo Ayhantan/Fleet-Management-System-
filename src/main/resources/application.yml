@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: fleet-management
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fleetdb
+    username: fleetuser
+    password: fleetpass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      "[hibernate.format_sql]": true
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: OGYwZTlmNGJjMTZhMmQ0OWVmNWQ4ZjdiOGY2YTM0ZDBhMWIyYzNkNGU1ZjYwNzE4MjkzYTRiNWM2ZDdlOGY5MA==
+    expiration-ms: 86400000
