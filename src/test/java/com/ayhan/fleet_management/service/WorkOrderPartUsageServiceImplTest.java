@@ -22,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -99,6 +100,7 @@ class WorkOrderPartUsageServiceImplTest {
         WorkOrderPartUsageRequestDto requestDto = WorkOrderPartUsageRequestDto.builder()
                 .partId(2L)
                 .quantityUsed(2)
+                .unitCost(new BigDecimal("7.50"))
                 .notes("Replaced during repair")
                 .build();
 
@@ -131,5 +133,7 @@ class WorkOrderPartUsageServiceImplTest {
         assertEquals(100L, responseDto.getStockMovementId());
         assertEquals(10L, responseDto.getWorkOrderId());
         assertEquals(2, responseDto.getQuantityUsed());
+        assertEquals(new BigDecimal("7.50"), responseDto.getUnitCost());
+        assertEquals(new BigDecimal("15.00"), responseDto.getTotalCost());
     }
 }

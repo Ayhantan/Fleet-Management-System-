@@ -5,7 +5,7 @@ A portfolio-grade backend project built with Spring Boot for managing fleet asse
 The project currently includes:
 - JWT-based authentication
 - vehicle and vehicle group management
-- maintenance definition, schedule, task, work order, and inventory modules
+- maintenance definition, schedule, task, work order, inventory, and cost tracking modules
 - usage-based and time-based maintenance calculation support
 
 ## Tech Stack
@@ -35,6 +35,7 @@ Implemented so far:
 - maintenance tasks for planned and completed maintenance work
 - work orders linked to vehicles, maintenance tasks, and assigned users
 - spare parts, inventory, stock movement, and work-order part usage tracking
+- work order expense tracking and calculated cost summaries
 - vehicle usage update endpoint with schedule recalculation
 - maintenance completion flow with backward compatibility for existing vehicle maintenance fields
 
@@ -73,6 +74,7 @@ Protected endpoints:
 - `/api/maintenance-schedules/**`
 - `/api/maintenance-tasks/**`
 - `/api/work-orders/**`
+- `/api/work-order-expenses/**`
 - `/api/parts/**`
 - `/api/inventory-items/**`
 - `/api/stock-movements/**`
@@ -263,6 +265,34 @@ The maintenance module is designed around four main concepts:
 - `COMPLETED`
 - `CANCELLED`
 
+## Work Order Cost Tracking
+
+Sprint 7 adds maintenance cost tracking at the work-order level. This is operational maintenance costing, not a procurement or accounting module.
+
+### CostType
+
+- `PART`
+- `LABOR`
+- `EXTERNAL_SERVICE`
+- `MISC`
+
+### WorkOrderExpense Fields
+
+- `id`
+- `workOrder`
+- `costType`
+- `description`
+- `amount`
+- `createdAt`
+- `updatedAt`
+
+### Cost Summary Design
+
+- cost totals are not stored directly on `WorkOrder`
+- part cost primarily comes from `WorkOrderPartUsage.totalCost`
+- `WorkOrderExpense` is used for manual cost entries such as labor, external service, misc, and optional non-stock part costs
+- work order cost totals are calculated dynamically through the summary endpoint to avoid stored-total inconsistency
+
 ### Maintenance Priority
 
 - `LOW`
@@ -321,6 +351,8 @@ Sprint 6 adds spare parts and stock tracking so work orders can consume inventor
 - `inventoryItem`
 - `stockMovement`
 - `quantityUsed`
+- `unitCost`
+- `totalCost`
 - `notes`
 - `createdAt`
 
@@ -353,6 +385,10 @@ Examples:
 - stock cannot be consumed below available quantity
 - parts can only be consumed for work orders in `OPEN`, `ASSIGNED`, or `IN_PROGRESS`
 - referenced parts and inventory records cannot be deleted if history would break
+- expense amount must be greater than 0
+- expenses can only be created, updated, or deleted while the related work order is not `COMPLETED` or `CANCELLED`
+- `WorkOrderPartUsage.totalCost` is calculated as `quantityUsed * unitCost` when `unitCost` is provided
+- null cost values are treated as zero in work order cost summaries
 
 ## API Overview
 
@@ -427,6 +463,14 @@ Examples:
 - `POST /api/work-orders/from-maintenance-task`
 - `POST /api/work-orders/{workOrderId}/parts`
 - `GET /api/work-orders/{workOrderId}/parts`
+- `POST /api/work-orders/{workOrderId}/expenses`
+- `GET /api/work-orders/{workOrderId}/expenses`
+- `GET /api/work-orders/{workOrderId}/cost-summary`
+
+### Work Order Expenses
+
+- `PUT /api/work-order-expenses/{expenseId}`
+- `DELETE /api/work-order-expenses/{expenseId}`
 
 ### Parts
 
@@ -484,6 +528,15 @@ Current automated coverage focuses on service-layer business rules for Sprint 6:
 - work-order part consumption rejection for terminal work orders
 - successful work-order part consumption with linked stock movement creation
 
+Sprint 7 adds service-layer unit coverage for:
+
+- positive expense creation
+- zero and negative expense rejection
+- expense rejection for completed or cancelled work orders
+- expense update and delete rules for terminal vs active work orders
+- work order cost summary calculation across part, labor, external service, misc, and grand totals
+- null `WorkOrderPartUsage.totalCost` handling in cost summaries
+
 Run tests with:
 
 ```bash
@@ -497,6 +550,7 @@ mvn test
 - maintenance definitions are database records, not enums
 - work order delete is a domain cancel, not a physical delete
 - inventory history is preserved through stock movements and work order part usage records
+- work order cost tracking is calculated from usage and expense records rather than stored as a denormalized work order total
 - no file upload, invoice, technician, workshop, cron jobs, or event sourcing yet
 - the design stays intentionally simple and interview-ready while remaining extensible
 
@@ -508,4 +562,5 @@ mvn test
 - controller-layer and integration test coverage
 - work order filtering, search, and reporting
 - supplier and purchase order flows
+- vehicle-level maintenance cost reporting
 - future asset abstraction beyond `Vehicle`

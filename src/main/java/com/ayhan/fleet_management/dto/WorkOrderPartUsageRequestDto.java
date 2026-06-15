@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,6 +23,8 @@ public class WorkOrderPartUsageRequestDto {
     @NotNull(message = "Quantity used is required")
     @Min(value = 1, message = "Quantity used must be greater than 0")
     private Integer quantityUsed;
+
+    private BigDecimal unitCost;
 
     private String notes;
 }

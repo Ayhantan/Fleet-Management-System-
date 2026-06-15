@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -71,6 +72,8 @@ public class WorkOrderPartUsageServiceImpl implements WorkOrderPartUsageService 
                 .inventoryItem(inventoryItem)
                 .stockMovement(savedMovement)
                 .quantityUsed(requestDto.getQuantityUsed())
+                .unitCost(requestDto.getUnitCost())
+                .totalCost(calculateTotalCost(requestDto.getQuantityUsed(), requestDto.getUnitCost()))
                 .notes(requestDto.getNotes())
                 .build();
 
@@ -118,6 +121,14 @@ public class WorkOrderPartUsageServiceImpl implements WorkOrderPartUsageService 
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found for part id: " + partId));
     }
 
+    private BigDecimal calculateTotalCost(Integer quantityUsed, BigDecimal unitCost) {
+        if (unitCost == null) {
+            return null;
+        }
+
+        return unitCost.multiply(BigDecimal.valueOf(quantityUsed.longValue()));
+    }
+
     private WorkOrderPartUsageResponseDto mapToResponseDto(WorkOrderPartUsage usage) {
         return WorkOrderPartUsageResponseDto.builder()
                 .id(usage.getId())
@@ -128,6 +139,8 @@ public class WorkOrderPartUsageServiceImpl implements WorkOrderPartUsageService 
                 .inventoryItemId(usage.getInventoryItem().getId())
                 .stockMovementId(usage.getStockMovement().getId())
                 .quantityUsed(usage.getQuantityUsed())
+                .unitCost(usage.getUnitCost())
+                .totalCost(usage.getTotalCost())
                 .notes(usage.getNotes())
                 .createdAt(usage.getCreatedAt())
                 .build();

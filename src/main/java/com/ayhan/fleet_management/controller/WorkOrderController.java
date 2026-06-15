@@ -2,11 +2,15 @@ package com.ayhan.fleet_management.controller;
 
 import com.ayhan.fleet_management.dto.CreateWorkOrderFromMaintenanceTaskRequestDto;
 import com.ayhan.fleet_management.dto.WorkOrderAssignmentRequestDto;
+import com.ayhan.fleet_management.dto.WorkOrderCostSummaryResponseDto;
 import com.ayhan.fleet_management.dto.WorkOrderCompletionRequestDto;
+import com.ayhan.fleet_management.dto.WorkOrderExpenseCreateRequestDto;
+import com.ayhan.fleet_management.dto.WorkOrderExpenseResponseDto;
 import com.ayhan.fleet_management.dto.WorkOrderPartUsageRequestDto;
 import com.ayhan.fleet_management.dto.WorkOrderPartUsageResponseDto;
 import com.ayhan.fleet_management.dto.WorkOrderRequestDto;
 import com.ayhan.fleet_management.dto.WorkOrderResponseDto;
+import com.ayhan.fleet_management.service.WorkOrderExpenseService;
 import com.ayhan.fleet_management.service.WorkOrderPartUsageService;
 import com.ayhan.fleet_management.service.WorkOrderService;
 import jakarta.validation.Valid;
@@ -31,6 +35,7 @@ public class WorkOrderController {
 
     private final WorkOrderService workOrderService;
     private final WorkOrderPartUsageService workOrderPartUsageService;
+    private final WorkOrderExpenseService workOrderExpenseService;
 
     @PostMapping
     public ResponseEntity<WorkOrderResponseDto> createWorkOrder(
@@ -109,5 +114,24 @@ public class WorkOrderController {
     @GetMapping("/{workOrderId}/parts")
     public ResponseEntity<List<WorkOrderPartUsageResponseDto>> getPartsByWorkOrder(@PathVariable Long workOrderId) {
         return ResponseEntity.ok(workOrderPartUsageService.getPartsByWorkOrder(workOrderId));
+    }
+
+    @PostMapping("/{workOrderId}/expenses")
+    public ResponseEntity<WorkOrderExpenseResponseDto> createExpense(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody WorkOrderExpenseCreateRequestDto requestDto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(workOrderExpenseService.createExpense(workOrderId, requestDto));
+    }
+
+    @GetMapping("/{workOrderId}/expenses")
+    public ResponseEntity<List<WorkOrderExpenseResponseDto>> getExpensesByWorkOrder(@PathVariable Long workOrderId) {
+        return ResponseEntity.ok(workOrderExpenseService.getExpensesByWorkOrder(workOrderId));
+    }
+
+    @GetMapping("/{workOrderId}/cost-summary")
+    public ResponseEntity<WorkOrderCostSummaryResponseDto> getCostSummary(@PathVariable Long workOrderId) {
+        return ResponseEntity.ok(workOrderExpenseService.getCostSummary(workOrderId));
     }
 }

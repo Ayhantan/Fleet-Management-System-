@@ -141,4 +141,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
+
+    @ExceptionHandler(InvalidExpenseException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidExpense(
+            InvalidExpenseException exception
+    ) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Bad Request");
+        response.put("message", exception.getMessage());
+
+        return ResponseEntity.badRequest().body(response);
+    }
 }

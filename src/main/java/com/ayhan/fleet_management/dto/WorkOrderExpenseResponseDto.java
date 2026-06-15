@@ -1,5 +1,6 @@
 package com.ayhan.fleet_management.dto;
 
+import com.ayhan.fleet_management.entity.enums.CostType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,18 +15,13 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class WorkOrderPartUsageResponseDto {
+public class WorkOrderExpenseResponseDto {
 
     private Long id;
     private Long workOrderId;
-    private Long partId;
-    private String partNumber;
-    private String partName;
-    private Long inventoryItemId;
-    private Long stockMovementId;
-    private Integer quantityUsed;
-    private BigDecimal unitCost;
-    private BigDecimal totalCost;
-    private String notes;
+    private CostType costType;
+    private String description;
+    private BigDecimal amount;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
