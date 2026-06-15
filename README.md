@@ -5,7 +5,7 @@ A portfolio-grade backend project built with Spring Boot for managing fleet asse
 The project currently includes:
 - JWT-based authentication
 - vehicle and vehicle group management
-- maintenance definition, schedule, task, and work order modules
+- maintenance definition, schedule, task, work order, and inventory modules
 - usage-based and time-based maintenance calculation support
 
 ## Tech Stack
@@ -34,6 +34,7 @@ Implemented so far:
 - maintenance schedules linked to vehicles and maintenance definitions
 - maintenance tasks for planned and completed maintenance work
 - work orders linked to vehicles, maintenance tasks, and assigned users
+- spare parts, inventory, stock movement, and work-order part usage tracking
 - vehicle usage update endpoint with schedule recalculation
 - maintenance completion flow with backward compatibility for existing vehicle maintenance fields
 
@@ -72,6 +73,9 @@ Protected endpoints:
 - `/api/maintenance-schedules/**`
 - `/api/maintenance-tasks/**`
 - `/api/work-orders/**`
+- `/api/parts/**`
+- `/api/inventory-items/**`
+- `/api/stock-movements/**`
 
 ### Auth Flow
 
@@ -274,6 +278,57 @@ Response-only maintenance state:
 - `UPCOMING`
 - `OVERDUE`
 
+## Inventory Module
+
+Sprint 6 adds spare parts and stock tracking so work orders can consume inventory with history preserved.
+
+### Part Fields
+
+- `id`
+- `partNumber`
+- `name`
+- `description`
+- `unit`
+- `createdAt`
+- `updatedAt`
+
+### InventoryItem Fields
+
+- `id`
+- `part`
+- `currentQuantity`
+- `minimumStockLevel`
+- `location`
+- `createdAt`
+- `updatedAt`
+
+### StockMovement Fields
+
+- `id`
+- `part`
+- `inventoryItem`
+- `workOrder`
+- `type`
+- `quantity`
+- `notes`
+- `createdAt`
+
+### WorkOrderPartUsage Fields
+
+- `id`
+- `workOrder`
+- `part`
+- `inventoryItem`
+- `stockMovement`
+- `quantityUsed`
+- `notes`
+- `createdAt`
+
+### Stock Movement Types
+
+- `IN`
+- `OUT`
+
 ## Validation Rules
 
 Validation is handled at both DTO and service levels.
@@ -291,6 +346,13 @@ Examples:
 - assigning a user to an `OPEN` work order automatically changes status to `ASSIGNED`
 - `COMPLETED` and `CANCELLED` work orders are terminal states
 - work order completion requires `completionNotes`
+- part number must be unique
+- exactly one inventory item is allowed per part
+- inventory quantity fields cannot be negative
+- stock movement and work order part usage quantities must be greater than 0
+- stock cannot be consumed below available quantity
+- parts can only be consumed for work orders in `OPEN`, `ASSIGNED`, or `IN_PROGRESS`
+- referenced parts and inventory records cannot be deleted if history would break
 
 ## API Overview
 
@@ -363,6 +425,31 @@ Examples:
 - `POST /api/work-orders/{id}/complete`
 - `GET /api/work-orders/vehicle/{vehicleId}`
 - `POST /api/work-orders/from-maintenance-task`
+- `POST /api/work-orders/{workOrderId}/parts`
+- `GET /api/work-orders/{workOrderId}/parts`
+
+### Parts
+
+- `POST /api/parts`
+- `GET /api/parts`
+- `GET /api/parts/{id}`
+- `PUT /api/parts/{id}`
+- `DELETE /api/parts/{id}`
+
+### Inventory Items
+
+- `POST /api/inventory-items`
+- `GET /api/inventory-items`
+- `GET /api/inventory-items/{id}`
+- `PUT /api/inventory-items/{id}`
+- `DELETE /api/inventory-items/{id}`
+- `GET /api/inventory-items/low-stock`
+
+### Stock Movements
+
+- `POST /api/stock-movements/in`
+- `POST /api/stock-movements/out`
+- `GET /api/stock-movements/part/{partId}`
 
 ## Local Development Configuration
 
@@ -387,13 +474,30 @@ JPA setting:
 6. Log in via `/api/auth/login`.
 7. Use the returned JWT token for protected endpoints.
 
+## Testing
+
+Current automated coverage focuses on service-layer business rules for Sprint 6:
+
+- duplicate inventory item prevention per part
+- part delete rejection when references exist
+- stock-out rejection when quantity exceeds available stock
+- work-order part consumption rejection for terminal work orders
+- successful work-order part consumption with linked stock movement creation
+
+Run tests with:
+
+```bash
+mvn test
+```
+
 ## Notes
 
 - JWT authentication is enabled and sessions are stateless.
 - `Vehicle` remains the current maintainable asset root for compatibility.
 - maintenance definitions are database records, not enums
 - work order delete is a domain cancel, not a physical delete
-- no file upload, invoice, spare parts, technician, workshop, cron jobs, or event sourcing yet
+- inventory history is preserved through stock movements and work order part usage records
+- no file upload, invoice, technician, workshop, cron jobs, or event sourcing yet
 - the design stays intentionally simple and interview-ready while remaining extensible
 
 ## Next Likely Steps
@@ -401,6 +505,7 @@ JPA setting:
 - maintenance overview and dashboard responses
 - urgency scoring and richer due calculations
 - role-based access restrictions
-- test coverage for service and controller layers
+- controller-layer and integration test coverage
 - work order filtering, search, and reporting
+- supplier and purchase order flows
 - future asset abstraction beyond `Vehicle`

@@ -3,8 +3,11 @@ package com.ayhan.fleet_management.controller;
 import com.ayhan.fleet_management.dto.CreateWorkOrderFromMaintenanceTaskRequestDto;
 import com.ayhan.fleet_management.dto.WorkOrderAssignmentRequestDto;
 import com.ayhan.fleet_management.dto.WorkOrderCompletionRequestDto;
+import com.ayhan.fleet_management.dto.WorkOrderPartUsageRequestDto;
+import com.ayhan.fleet_management.dto.WorkOrderPartUsageResponseDto;
 import com.ayhan.fleet_management.dto.WorkOrderRequestDto;
 import com.ayhan.fleet_management.dto.WorkOrderResponseDto;
+import com.ayhan.fleet_management.service.WorkOrderPartUsageService;
 import com.ayhan.fleet_management.service.WorkOrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ import java.util.List;
 public class WorkOrderController {
 
     private final WorkOrderService workOrderService;
+    private final WorkOrderPartUsageService workOrderPartUsageService;
 
     @PostMapping
     public ResponseEntity<WorkOrderResponseDto> createWorkOrder(
@@ -91,5 +95,19 @@ public class WorkOrderController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(workOrderService.createWorkOrderFromMaintenanceTask(requestDto));
+    }
+
+    @PostMapping("/{workOrderId}/parts")
+    public ResponseEntity<WorkOrderPartUsageResponseDto> consumePart(
+            @PathVariable Long workOrderId,
+            @Valid @RequestBody WorkOrderPartUsageRequestDto requestDto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(workOrderPartUsageService.consumePart(workOrderId, requestDto));
+    }
+
+    @GetMapping("/{workOrderId}/parts")
+    public ResponseEntity<List<WorkOrderPartUsageResponseDto>> getPartsByWorkOrder(@PathVariable Long workOrderId) {
+        return ResponseEntity.ok(workOrderPartUsageService.getPartsByWorkOrder(workOrderId));
     }
 }
