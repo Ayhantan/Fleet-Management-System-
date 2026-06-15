@@ -89,4 +89,30 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(response);
     }
+
+    @ExceptionHandler(InvalidWorkOrderStateException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidWorkOrderState(
+            InvalidWorkOrderStateException exception
+    ) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
+        response.put("error", "Bad Request");
+        response.put("message", exception.getMessage());
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(ActiveWorkOrderExistsException.class)
+    public ResponseEntity<Map<String, Object>> handleActiveWorkOrderExists(
+            ActiveWorkOrderExistsException exception
+    ) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.CONFLICT.value());
+        response.put("error", "Conflict");
+        response.put("message", exception.getMessage());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
 }

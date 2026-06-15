@@ -5,7 +5,7 @@ A portfolio-grade backend project built with Spring Boot for managing fleet asse
 The project currently includes:
 - JWT-based authentication
 - vehicle and vehicle group management
-- maintenance definition, schedule, and task modules
+- maintenance definition, schedule, task, and work order modules
 - usage-based and time-based maintenance calculation support
 
 ## Tech Stack
@@ -33,6 +33,7 @@ Implemented so far:
 - maintenance definitions as database-driven master data
 - maintenance schedules linked to vehicles and maintenance definitions
 - maintenance tasks for planned and completed maintenance work
+- work orders linked to vehicles, maintenance tasks, and assigned users
 - vehicle usage update endpoint with schedule recalculation
 - maintenance completion flow with backward compatibility for existing vehicle maintenance fields
 
@@ -70,6 +71,7 @@ Protected endpoints:
 - `/api/maintenance-definitions/**`
 - `/api/maintenance-schedules/**`
 - `/api/maintenance-tasks/**`
+- `/api/work-orders/**`
 
 ### Auth Flow
 
@@ -158,7 +160,7 @@ Rules:
 
 ## Maintenance Module
 
-The maintenance module is designed around three main concepts:
+The maintenance module is designed around four main concepts:
 
 1. `MaintenanceDefinition`
 - reusable, database-driven maintenance master data
@@ -170,6 +172,12 @@ The maintenance module is designed around three main concepts:
 
 3. `MaintenanceTask`
 - represents an actual planned or completed maintenance job
+
+4. `WorkOrder`
+- represents operational execution and assignment for repair or maintenance work
+- always linked to a `Vehicle`
+- may optionally link to a `MaintenanceTask`
+- may optionally be assigned to a `User`
 
 ### MaintenanceDefinition Fields
 
@@ -227,6 +235,30 @@ The maintenance module is designed around three main concepts:
 - `COMPLETED`
 - `CANCELLED`
 
+### WorkOrder Fields
+
+- `id`
+- `vehicle`
+- `maintenanceTask`
+- `assignedUser`
+- `title`
+- `description`
+- `status`
+- `completionNotes`
+- `actualCost`
+- `laborHours`
+- `completedAt`
+- `createdAt`
+- `updatedAt`
+
+### Work Order Status
+
+- `OPEN`
+- `ASSIGNED`
+- `IN_PROGRESS`
+- `COMPLETED`
+- `CANCELLED`
+
 ### Maintenance Priority
 
 - `LOW`
@@ -254,6 +286,11 @@ Examples:
 - `TIME` trigger requires time interval fields
 - maintenance schedules validate trigger-specific interval fields
 - usage update requires at least one value
+- a maintenance task may have at most one active work order
+- active work orders are those not in `COMPLETED` or `CANCELLED`
+- assigning a user to an `OPEN` work order automatically changes status to `ASSIGNED`
+- `COMPLETED` and `CANCELLED` work orders are terminal states
+- work order completion requires `completionNotes`
 
 ## API Overview
 
@@ -314,6 +351,19 @@ Examples:
 - `POST /api/maintenance-tasks/{id}/complete`
 - `GET /api/maintenance-tasks/history/vehicle/{vehicleId}`
 
+### Work Orders
+
+- `POST /api/work-orders`
+- `GET /api/work-orders`
+- `GET /api/work-orders/{id}`
+- `PUT /api/work-orders/{id}`
+- `DELETE /api/work-orders/{id}`
+- `POST /api/work-orders/{id}/assign`
+- `POST /api/work-orders/{id}/start`
+- `POST /api/work-orders/{id}/complete`
+- `GET /api/work-orders/vehicle/{vehicleId}`
+- `POST /api/work-orders/from-maintenance-task`
+
 ## Local Development Configuration
 
 Current local database setup:
@@ -342,6 +392,7 @@ JPA setting:
 - JWT authentication is enabled and sessions are stateless.
 - `Vehicle` remains the current maintainable asset root for compatibility.
 - maintenance definitions are database records, not enums
+- work order delete is a domain cancel, not a physical delete
 - no file upload, invoice, spare parts, technician, workshop, cron jobs, or event sourcing yet
 - the design stays intentionally simple and interview-ready while remaining extensible
 
@@ -351,4 +402,5 @@ JPA setting:
 - urgency scoring and richer due calculations
 - role-based access restrictions
 - test coverage for service and controller layers
+- work order filtering, search, and reporting
 - future asset abstraction beyond `Vehicle`
