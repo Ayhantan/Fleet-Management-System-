@@ -42,7 +42,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             username = jwtService.extractUsername(jwt);
         } catch (JwtException | IllegalArgumentException exception) {
-            filterChain.doFilter(request, response);
+            CustomAuthenticationEntryPoint.writeJsonResponse(
+                    response,
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Invalid or expired token"
+            );
             return;
         }
 

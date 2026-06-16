@@ -36,6 +36,7 @@ Implemented so far:
 - work orders linked to vehicles, maintenance tasks, and assigned users
 - spare parts, inventory, stock movement, and work-order part usage tracking
 - work order expense tracking and calculated cost summaries
+- read-only dashboard and reporting queries under `/api/reports`
 - vehicle usage update endpoint with schedule recalculation
 - maintenance completion flow with backward compatibility for existing vehicle maintenance fields
 
@@ -293,6 +294,19 @@ Sprint 7 adds maintenance cost tracking at the work-order level. This is operati
 - `WorkOrderExpense` is used for manual cost entries such as labor, external service, misc, and optional non-stock part costs
 - work order cost totals are calculated dynamically through the summary endpoint to avoid stored-total inconsistency
 
+## Dashboard and Reporting
+
+Sprint 8 adds read-only reporting endpoints for dashboard and operational reporting. These reports stay within maintenance and inventory scope and do not add procurement, supplier, invoice, payment, or accounting modules.
+
+### Reporting Design
+
+- report responses are DTO-based and read-only
+- totals are aggregated at service level from existing records
+- `WorkOrder.actualCost` is not used for reporting totals
+- maintenance status reporting reuses `MaintenanceCalculationService`
+- null monetary values are treated as zero during aggregation
+- TODO: replace in-memory service aggregation with JPQL grouping queries later if report volume requires better performance
+
 ### Maintenance Priority
 
 - `LOW`
@@ -495,6 +509,16 @@ Examples:
 - `POST /api/stock-movements/out`
 - `GET /api/stock-movements/part/{partId}`
 
+### Reports
+
+- `GET /api/reports/dashboard-summary`
+- `GET /api/reports/work-orders/status-summary`
+- `GET /api/reports/work-orders/recent-completed`
+- `GET /api/reports/maintenance/status-summary`
+- `GET /api/reports/vehicles/maintenance-costs`
+- `GET /api/reports/parts/consumption`
+- `GET /api/reports/inventory/low-stock-summary`
+
 ## Local Development Configuration
 
 Current local database setup:
@@ -537,6 +561,15 @@ Sprint 7 adds service-layer unit coverage for:
 - work order cost summary calculation across part, labor, external service, misc, and grand totals
 - null `WorkOrderPartUsage.totalCost` handling in cost summaries
 
+Sprint 8 adds service-layer unit coverage for:
+
+- dashboard summary count and cost aggregation
+- maintenance status summary using `MaintenanceCalculationService`
+- recent completed work-order reporting
+- vehicle maintenance cost reporting
+- part consumption reporting
+- low-stock summary reporting
+
 Run tests with:
 
 ```bash
@@ -551,6 +584,7 @@ mvn test
 - work order delete is a domain cancel, not a physical delete
 - inventory history is preserved through stock movements and work order part usage records
 - work order cost tracking is calculated from usage and expense records rather than stored as a denormalized work order total
+- reporting remains read-only and aggregates from existing maintenance, work order, and inventory records
 - no file upload, invoice, technician, workshop, cron jobs, or event sourcing yet
 - the design stays intentionally simple and interview-ready while remaining extensible
 
@@ -561,6 +595,5 @@ mvn test
 - role-based access restrictions
 - controller-layer and integration test coverage
 - work order filtering, search, and reporting
-- supplier and purchase order flows
 - vehicle-level maintenance cost reporting
 - future asset abstraction beyond `Vehicle`
