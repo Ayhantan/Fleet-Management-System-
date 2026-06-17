@@ -1,48 +1,47 @@
-# Distributed Maintenance & Fleet Management System
+# Fleet Management System
 
-A portfolio-grade backend project built with Spring Boot for managing fleet assets, maintenance planning, authentication, and operational tracking.
+A full-stack fleet maintenance and operations project built with Spring Boot and React. The system focuses on vehicle tracking, maintenance planning, work order execution, inventory control, and operational reporting.
 
-The project currently includes:
-- JWT-based authentication
+This repository started as a backend-first project and now includes a responsive frontend for desktop, tablet, and mobile use.
+
+## Overview
+
+The project covers the core workflows of a maintenance-oriented fleet operation:
+
+- authentication with JWT
 - vehicle and vehicle group management
-- maintenance definition, schedule, task, work order, inventory, and cost tracking modules
-- usage-based and time-based maintenance calculation support
+- maintenance definitions, schedules, and tasks
+- work order lifecycle management
+- spare parts, inventory, and stock movement tracking
+- maintenance cost tracking
+- dashboard and reporting endpoints
+
+The goal is to keep the architecture simple enough to understand quickly, while still modeling realistic business rules.
 
 ## Tech Stack
 
+### Backend
+
 - Java 21
 - Spring Boot
-- Maven
-- PostgreSQL
-- Spring Data JPA
 - Spring Security
+- Spring Data JPA
+- PostgreSQL
+- Maven
 - Jakarta Validation
 - Lombok
 
-## Current Scope
+### Frontend
 
-The system is being developed incrementally in sprints.
-
-Implemented so far:
-- application bootstrap and database integration
-- health check endpoint
-- JWT authentication and authorization
-- vehicle CRUD
-- vehicle group CRUD
-- vehicle-to-group assignment
-- maintenance definitions as database-driven master data
-- maintenance schedules linked to vehicles and maintenance definitions
-- maintenance tasks for planned and completed maintenance work
-- work orders linked to vehicles, maintenance tasks, and assigned users
-- spare parts, inventory, stock movement, and work-order part usage tracking
-- work order expense tracking and calculated cost summaries
-- read-only dashboard and reporting queries under `/api/reports`
-- vehicle usage update endpoint with schedule recalculation
-- maintenance completion flow with backward compatibility for existing vehicle maintenance fields
+- React
+- Vite
+- React Router
+- Axios
+- Tailwind CSS
 
 ## Architecture
 
-The project uses a layered monolith structure:
+The backend follows a layered monolith structure:
 
 - `controller`
 - `service`
@@ -59,541 +58,250 @@ Base package:
 com.ayhan.fleet_management
 ```
 
-## Authentication Module
+The frontend lives under:
 
-JWT-based authentication is implemented with stateless session management.
+```text
+frontend/
+```
 
-Public endpoints:
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /health`
+and is organized around:
 
-Protected endpoints:
-- `/api/vehicles/**`
-- `/api/vehicle-groups/**`
-- `/api/maintenance-definitions/**`
-- `/api/maintenance-schedules/**`
-- `/api/maintenance-tasks/**`
-- `/api/work-orders/**`
-- `/api/work-order-expenses/**`
-- `/api/parts/**`
-- `/api/inventory-items/**`
-- `/api/stock-movements/**`
+- `pages`
+- `components`
+- `services`
+- `hooks`
+- `utils`
 
-### Auth Flow
+## Current Features
 
-- users register with username, email, and password
-- passwords are encoded with `BCryptPasswordEncoder`
-- login returns a JWT token
-- protected endpoints require `Authorization: Bearer <token>`
+### Authentication
 
-## Vehicle Module
-
-`Vehicle` is currently the maintainable asset root. The name stays as `Vehicle` for now to avoid a large refactor, but the maintenance model is being designed to support a broader asset domain.
-
-### Vehicle Operational Fields
-
-- `id`
-- `name`
-- `plateNumber`
-- `brand`
-- `model`
-- `modelYear`
-- `type`
-- `status`
-- `imageUrl`
-- `vehicleGroup`
-- `createdAt`
-- `updatedAt`
-
-### Vehicle Maintenance Fields
-
-The existing maintenance fields are still preserved for backward compatibility:
-
-- `category`
-- `currentHourMeter`
-- `currentDistanceReading`
-- `lastMaintenanceDate`
-- `lastMaintenanceHourMeter`
-- `lastMaintenanceDistanceReading`
-- `maintenanceTriggerType`
-- `hourIntervalValue`
-- `distanceIntervalValue`
-- `timeIntervalValue`
-- `timeIntervalUnit`
-- `distanceUnit`
-
-### Vehicle Status
-
-- `ACTIVE`
-- `IN_MAINTENANCE`
-- `OUT_OF_SERVICE`
-
-### Maintenance Trigger Types
-
-- `TIME`
-- `HOURS`
-- `DISTANCE`
-- `TIME_AND_HOURS`
-- `TIME_AND_DISTANCE`
-
-### Interval Units
-
-Time:
-- `DAY`
-- `WEEK`
-- `MONTH`
-- `YEAR`
-
-Distance:
-- `KILOMETER`
-- `MILE`
-
-## Vehicle Group Module
-
-Vehicles can be grouped for operational organization.
-
-### VehicleGroup Fields
-
-- `id`
-- `name`
-- `description`
-- `createdAt`
-- `updatedAt`
-
-Rules:
-- group name must be unique
-- a vehicle may belong to zero or one group
-
-## Maintenance Module
-
-The maintenance module is designed around four main concepts:
-
-1. `MaintenanceDefinition`
-- reusable, database-driven maintenance master data
-- examples: oil change, brake inspection, track inspection, nozzle replacement, landing gear inspection, custom maintenance item
-
-2. `MaintenanceSchedule`
-- links a `Vehicle` and a `MaintenanceDefinition`
-- stores due rule and calculated next due values
-
-3. `MaintenanceTask`
-- represents an actual planned or completed maintenance job
-
-4. `WorkOrder`
-- represents operational execution and assignment for repair or maintenance work
-- always linked to a `Vehicle`
-- may optionally link to a `MaintenanceTask`
-- may optionally be assigned to a `User`
-
-### MaintenanceDefinition Fields
-
-- `id`
-- `name`
-- `description`
-- `category`
-- `applicableAssetType`
-- `active`
-- `createdAt`
-- `updatedAt`
-
-### MaintenanceSchedule Fields
-
-- `id`
-- `vehicle`
-- `maintenanceDefinition`
-- `triggerType`
-- `intervalHour`
-- `intervalDistance`
-- `intervalTimeValue`
-- `intervalTimeUnit`
-- `nextDueDate`
-- `nextDueHourMeter`
-- `nextDueDistanceReading`
-- `active`
-- `createdAt`
-- `updatedAt`
-
-### MaintenanceTask Fields
-
-- `id`
-- `vehicle`
-- `maintenanceSchedule`
-- `maintenanceDefinition`
-- `title`
-- `description`
-- `status`
-- `priority`
-- `plannedDate`
-- `dueDate`
-- `dueHourMeter`
-- `dueDistanceReading`
-- `completedDate`
-- `completedHourMeter`
-- `completedDistanceReading`
-- `notes`
-- `createdAt`
-- `updatedAt`
-
-### Maintenance Task Status
-
-- `PLANNED`
-- `IN_PROGRESS`
-- `COMPLETED`
-- `CANCELLED`
-
-### WorkOrder Fields
-
-- `id`
-- `vehicle`
-- `maintenanceTask`
-- `assignedUser`
-- `title`
-- `description`
-- `status`
-- `completionNotes`
-- `actualCost`
-- `laborHours`
-- `completedAt`
-- `createdAt`
-- `updatedAt`
-
-### Work Order Status
-
-- `OPEN`
-- `ASSIGNED`
-- `IN_PROGRESS`
-- `COMPLETED`
-- `CANCELLED`
-
-## Work Order Cost Tracking
-
-Sprint 7 adds maintenance cost tracking at the work-order level. This is operational maintenance costing, not a procurement or accounting module.
-
-### CostType
-
-- `PART`
-- `LABOR`
-- `EXTERNAL_SERVICE`
-- `MISC`
-
-### WorkOrderExpense Fields
-
-- `id`
-- `workOrder`
-- `costType`
-- `description`
-- `amount`
-- `createdAt`
-- `updatedAt`
-
-### Cost Summary Design
-
-- cost totals are not stored directly on `WorkOrder`
-- part cost primarily comes from `WorkOrderPartUsage.totalCost`
-- `WorkOrderExpense` is used for manual cost entries such as labor, external service, misc, and optional non-stock part costs
-- work order cost totals are calculated dynamically through the summary endpoint to avoid stored-total inconsistency
-
-## Dashboard and Reporting
-
-Sprint 8 adds read-only reporting endpoints for dashboard and operational reporting. These reports stay within maintenance and inventory scope and do not add procurement, supplier, invoice, payment, or accounting modules.
-
-### Reporting Design
-
-- report responses are DTO-based and read-only
-- totals are aggregated at service level from existing records
-- `WorkOrder.actualCost` is not used for reporting totals
-- maintenance status reporting reuses `MaintenanceCalculationService`
-- null monetary values are treated as zero during aggregation
-- TODO: replace in-memory service aggregation with JPQL grouping queries later if report volume requires better performance
-
-### Maintenance Priority
-
-- `LOW`
-- `MEDIUM`
-- `HIGH`
-- `CRITICAL`
-
-### Calculated Maintenance Status
-
-Response-only maintenance state:
-
-- `ON_TRACK`
-- `UPCOMING`
-- `OVERDUE`
-
-## Inventory Module
-
-Sprint 6 adds spare parts and stock tracking so work orders can consume inventory with history preserved.
-
-### Part Fields
-
-- `id`
-- `partNumber`
-- `name`
-- `description`
-- `unit`
-- `createdAt`
-- `updatedAt`
-
-### InventoryItem Fields
-
-- `id`
-- `part`
-- `currentQuantity`
-- `minimumStockLevel`
-- `location`
-- `createdAt`
-- `updatedAt`
-
-### StockMovement Fields
-
-- `id`
-- `part`
-- `inventoryItem`
-- `workOrder`
-- `type`
-- `quantity`
-- `notes`
-- `createdAt`
-
-### WorkOrderPartUsage Fields
-
-- `id`
-- `workOrder`
-- `part`
-- `inventoryItem`
-- `stockMovement`
-- `quantityUsed`
-- `unitCost`
-- `totalCost`
-- `notes`
-- `createdAt`
-
-### Stock Movement Types
-
-- `IN`
-- `OUT`
-
-## Validation Rules
-
-Validation is handled at both DTO and service levels.
-
-Examples:
-- `plateNumber` must be unique
-- vehicle group name must be unique
-- `HOURS` trigger requires hour-based inputs
-- `DISTANCE` trigger requires distance-based inputs
-- `TIME` trigger requires time interval fields
-- maintenance schedules validate trigger-specific interval fields
-- usage update requires at least one value
-- a maintenance task may have at most one active work order
-- active work orders are those not in `COMPLETED` or `CANCELLED`
-- assigning a user to an `OPEN` work order automatically changes status to `ASSIGNED`
-- `COMPLETED` and `CANCELLED` work orders are terminal states
-- work order completion requires `completionNotes`
-- part number must be unique
-- exactly one inventory item is allowed per part
-- inventory quantity fields cannot be negative
-- stock movement and work order part usage quantities must be greater than 0
-- stock cannot be consumed below available quantity
-- parts can only be consumed for work orders in `OPEN`, `ASSIGNED`, or `IN_PROGRESS`
-- referenced parts and inventory records cannot be deleted if history would break
-- expense amount must be greater than 0
-- expenses can only be created, updated, or deleted while the related work order is not `COMPLETED` or `CANCELLED`
-- `WorkOrderPartUsage.totalCost` is calculated as `quantityUsed * unitCost` when `unitCost` is provided
-- null cost values are treated as zero in work order cost summaries
-
-## API Overview
-
-### Health
-
-- `GET /health`
-
-### Auth
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
+- register and login with JWT
+- stateless API authentication
+- bearer token handling in the frontend
+- automatic redirect to login on `401`
 
 ### Vehicles
 
-- `POST /api/vehicles`
-- `GET /api/vehicles`
-- `GET /api/vehicles/{id}`
-- `PUT /api/vehicles/{id}`
-- `DELETE /api/vehicles/{id}`
-- `PUT /api/vehicles/{vehicleId}/group/{groupId}`
-- `DELETE /api/vehicles/{vehicleId}/group`
-- `PATCH /api/vehicles/{vehicleId}/usage`
+- vehicle listing
+- vehicle creation
+- vehicle detail modal
+- vehicle editing
+- vehicle usage update
+- vehicle group assignment and removal
+- vehicle deletion
 
-### Vehicle Groups
+### Maintenance
 
-- `POST /api/vehicle-groups`
-- `GET /api/vehicle-groups`
-- `GET /api/vehicle-groups/{id}`
-- `PUT /api/vehicle-groups/{id}`
-- `DELETE /api/vehicle-groups/{id}`
-
-### Maintenance Definitions
-
-- `POST /api/maintenance-definitions`
-- `GET /api/maintenance-definitions`
-- `GET /api/maintenance-definitions/{id}`
-- `PUT /api/maintenance-definitions/{id}`
-- `DELETE /api/maintenance-definitions/{id}`
-
-### Maintenance Schedules
-
-- `POST /api/maintenance-schedules`
-- `GET /api/maintenance-schedules`
-- `GET /api/maintenance-schedules/{id}`
-- `PUT /api/maintenance-schedules/{id}`
-- `DELETE /api/maintenance-schedules/{id}`
-- `POST /api/maintenance-schedules/{id}/recalculate`
-- `GET /api/maintenance-schedules/upcoming`
-- `GET /api/maintenance-schedules/overdue`
-
-### Maintenance Tasks
-
-- `POST /api/maintenance-tasks`
-- `GET /api/maintenance-tasks`
-- `GET /api/maintenance-tasks/{id}`
-- `PUT /api/maintenance-tasks/{id}`
-- `DELETE /api/maintenance-tasks/{id}`
-- `POST /api/maintenance-tasks/{id}/complete`
-- `GET /api/maintenance-tasks/history/vehicle/{vehicleId}`
+- maintenance definition management
+- maintenance schedule management
+- schedule recalculation
+- maintenance task management
+- maintenance task completion flow
 
 ### Work Orders
 
-- `POST /api/work-orders`
-- `GET /api/work-orders`
-- `GET /api/work-orders/{id}`
-- `PUT /api/work-orders/{id}`
-- `DELETE /api/work-orders/{id}`
-- `POST /api/work-orders/{id}/assign`
-- `POST /api/work-orders/{id}/start`
-- `POST /api/work-orders/{id}/complete`
-- `GET /api/work-orders/vehicle/{vehicleId}`
-- `POST /api/work-orders/from-maintenance-task`
-- `POST /api/work-orders/{workOrderId}/parts`
-- `GET /api/work-orders/{workOrderId}/parts`
-- `POST /api/work-orders/{workOrderId}/expenses`
-- `GET /api/work-orders/{workOrderId}/expenses`
-- `GET /api/work-orders/{workOrderId}/cost-summary`
+- work order listing and filtering
+- work order creation
+- work order detail view
+- start, complete, and cancel actions
+- part usage registration
+- expense registration
+- cost summary display
 
-### Work Order Expenses
+### Inventory
 
-- `PUT /api/work-order-expenses/{expenseId}`
-- `DELETE /api/work-order-expenses/{expenseId}`
+- part management
+- inventory item management
+- low stock visibility
+- stock in / stock out operations
+- stock movement history by part
 
-### Parts
+### Reporting
 
-- `POST /api/parts`
-- `GET /api/parts`
-- `GET /api/parts/{id}`
-- `PUT /api/parts/{id}`
-- `DELETE /api/parts/{id}`
+- dashboard summary
+- low stock summary
+- work order status summary
+- maintenance status summary
+- recent completed work orders
+- vehicle maintenance cost report
+- part consumption report
 
-### Inventory Items
+## Frontend Status
 
-- `POST /api/inventory-items`
-- `GET /api/inventory-items`
-- `GET /api/inventory-items/{id}`
-- `PUT /api/inventory-items/{id}`
-- `DELETE /api/inventory-items/{id}`
-- `GET /api/inventory-items/low-stock`
+The frontend is connected directly to the Spring Boot API and covers the main operational flows.
 
-### Stock Movements
+Available routes:
 
-- `POST /api/stock-movements/in`
-- `POST /api/stock-movements/out`
-- `GET /api/stock-movements/part/{partId}`
+- `/login`
+- `/register`
+- `/dashboard`
+- `/vehicles`
+- `/work-orders`
+- `/maintenance`
+- `/inventory`
+- `/reports`
 
-### Reports
+## API Summary
 
-- `GET /api/reports/dashboard-summary`
-- `GET /api/reports/work-orders/status-summary`
-- `GET /api/reports/work-orders/recent-completed`
-- `GET /api/reports/maintenance/status-summary`
-- `GET /api/reports/vehicles/maintenance-costs`
-- `GET /api/reports/parts/consumption`
-- `GET /api/reports/inventory/low-stock-summary`
+Main endpoint groups:
 
-## Local Development Configuration
+- `/api/auth`
+- `/api/vehicles`
+- `/api/vehicle-groups`
+- `/api/maintenance-definitions`
+- `/api/maintenance-schedules`
+- `/api/maintenance-tasks`
+- `/api/work-orders`
+- `/api/work-order-expenses`
+- `/api/parts`
+- `/api/inventory-items`
+- `/api/stock-movements`
+- `/api/reports`
 
-Current local database setup:
+Detailed API documentation is available in [API_README.md](/d:/Project/fleet-management/API_README.md).
 
-- Host: `localhost`
-- Port: `5432`
-- Database: `fleetdb`
-- Username: `fleetuser`
+## Business Rules
 
-JPA setting:
+Some important rules currently enforced by the backend:
 
-- `spring.jpa.hibernate.ddl-auto=update`
+- plate numbers must be unique
+- vehicle group names must be unique
+- maintenance trigger configuration must match the selected trigger type
+- a maintenance task can have at most one active work order
+- assigning a user to an open work order moves it to `ASSIGNED`
+- `COMPLETED` and `CANCELLED` work orders are terminal
+- stock cannot go below available quantity
+- inventory quantity values cannot be negative
+- expenses must be greater than zero
+- cost summaries are calculated dynamically from usage and expense records
 
-## Running the Project
+## Local Development
 
-1. Make sure the PostgreSQL container is running.
-2. Verify that the `fleetdb` database is available.
-3. Start the Spring Boot application.
-4. Test `http://localhost:8080/health`.
-5. Register a user via `/api/auth/register`.
-6. Log in via `/api/auth/login`.
-7. Use the returned JWT token for protected endpoints.
+### Prerequisites
+
+- Java 21
+- Node.js 22+ recommended
+- Docker
+- PostgreSQL client optional
+
+### Database
+
+The project includes a PostgreSQL container setup:
+
+```powershell
+docker compose up -d
+```
+
+Default local database settings:
+
+- host: `localhost`
+- port: `5432`
+- database: `fleetdb`
+- username: `fleetuser`
+- password: `fleetpass`
+
+### Run Backend
+
+From the project root:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+Backend default URL:
+
+```text
+http://localhost:8080
+```
+
+Health check:
+
+```text
+http://localhost:8080/health
+```
+
+### Run Frontend
+
+From the `frontend` directory:
+
+```powershell
+npm.cmd install
+npm.cmd run dev
+```
+
+Frontend default URL:
+
+```text
+http://localhost:5173
+```
+
+## Authentication Flow
+
+Public endpoints:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /health`
+
+Protected endpoints require:
+
+```http
+Authorization: Bearer <token>
+```
+
+Login and register responses return:
+
+```json
+{
+  "token": "jwt-token",
+  "username": "demo",
+  "email": "demo@example.com",
+  "role": "USER"
+}
+```
 
 ## Testing
 
-Current automated coverage focuses on service-layer business rules for Sprint 6:
+Run backend tests with:
 
-- duplicate inventory item prevention per part
-- part delete rejection when references exist
-- stock-out rejection when quantity exceeds available stock
-- work-order part consumption rejection for terminal work orders
-- successful work-order part consumption with linked stock movement creation
-
-Sprint 7 adds service-layer unit coverage for:
-
-- positive expense creation
-- zero and negative expense rejection
-- expense rejection for completed or cancelled work orders
-- expense update and delete rules for terminal vs active work orders
-- work order cost summary calculation across part, labor, external service, misc, and grand totals
-- null `WorkOrderPartUsage.totalCost` handling in cost summaries
-
-Sprint 8 adds service-layer unit coverage for:
-
-- dashboard summary count and cost aggregation
-- maintenance status summary using `MaintenanceCalculationService`
-- recent completed work-order reporting
-- vehicle maintenance cost reporting
-- part consumption reporting
-- low-stock summary reporting
-
-Run tests with:
-
-```bash
+```powershell
 mvn test
 ```
 
-## Notes
+Current automated coverage is focused mainly on service-layer business rules around:
 
-- JWT authentication is enabled and sessions are stateless.
-- `Vehicle` remains the current maintainable asset root for compatibility.
+- inventory constraints
+- work order state transitions
+- expense rules
+- cost summary calculations
+- reporting aggregation
+
+## Known Limitations
+
+- no pagination on list endpoints yet
+- no frontend onboarding beyond register/login
+- no user listing endpoint for richer work order assignment UX
+- role information is returned in JWT responses, but role-based authorization is still limited
+- some reporting queries are implemented in service-level aggregation and may need optimization later
+
+## Project Notes
+
+- `Vehicle` is still the main maintainable asset entity
 - maintenance definitions are database records, not enums
-- work order delete is a domain cancel, not a physical delete
-- inventory history is preserved through stock movements and work order part usage records
-- work order cost tracking is calculated from usage and expense records rather than stored as a denormalized work order total
-- reporting remains read-only and aggregates from existing maintenance, work order, and inventory records
-- no file upload, invoice, technician, workshop, cron jobs, or event sourcing yet
-- the design stays intentionally simple and interview-ready while remaining extensible
+- deleting a work order is implemented as a domain cancel flow
+- reporting is read-only
+- the current design intentionally stays straightforward and interview-friendly
 
-## Next Likely Steps
+## Roadmap Ideas
 
-- maintenance overview and dashboard responses
-- urgency scoring and richer due calculations
-- role-based access restrictions
-- controller-layer and integration test coverage
-- work order filtering, search, and reporting
-- vehicle-level maintenance cost reporting
-- future asset abstraction beyond `Vehicle`
+- role-based access control
+- pagination and filtering improvements
+- richer dashboard drill-down flows
+- controller and integration test coverage
+- file attachments and media support
+- more advanced assignment and operator management
+
+## License
+
+This project is licensed under the terms of the [LICENSE](LICENSE) file.
